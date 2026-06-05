@@ -23,7 +23,7 @@ button{cursor:pointer;border:none;outline:none;font-family:inherit;-webkit-tap-h
 .fico-sm{width:66px;height:66px;flex-shrink:0}
 .fico-sm.bounce{animation:fBounce .4s}
 @keyframes fBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-11px)}}
-.bubble-sm{background:#fff;border:3px solid #FF8C00;border-radius:13px;padding:5px 11px;font-size:13px;font-weight:800;color:#333;position:relative;box-shadow:var(--shadow);line-height:1.3;flex:1}
+.bubble-sm{background:#fff;border:3px solid #FF8C00;border-radius:13px;padding:7px 13px;font-size:18px;font-weight:800;color:#333;position:relative;box-shadow:var(--shadow);line-height:1.4;flex:1}
 .bubble-sm::before{content:'';position:absolute;left:-11px;top:50%;transform:translateY(-50%);border:5px solid transparent;border-right-color:#FF8C00}
 .game-area{flex:1;width:100%;position:relative;overflow:hidden}
 .timer-bar-wrap{width:100%;height:13px;background:#eee;flex-shrink:0}
@@ -218,7 +218,8 @@ function initTocca(){toccaScore=0;toccaLevel=1;document.getElementById('tocca-sc
 function nextTocca(){
   clearInterval(toccaInt);
   toccaTarget=ANIMALS_OK[~~(Math.random()*ANIMALS_OK.length)];
-  setBubble('tocca',`TOCCA ${toccaTarget}! VELOCE!`);
+  // bolla con icona grande
+  setBubble('tocca',`<span style="font-size:52px;display:block;text-align:center;line-height:1.1">${toccaTarget}</span><span style="font-size:17px">TOCCA QUESTO! VELOCE!</span>`);
   bounceFico('fico-tocca');
   const area=document.getElementById('tocca-area');area.innerHTML='';
   const W=area.offsetWidth||window.innerWidth,H=area.offsetHeight||window.innerHeight*.6;
@@ -318,17 +319,22 @@ function generateLinePath(W,H,score){
   } else if(type==='curve'){
     for(let i=0;i<=40;i++){const t=i/40;pts.push({x:30+t*(W-60),y:cy+Math.cos(t*Math.PI*2)*(H*.3)});}
   } else if(type==='star'){
-    // stella a 5 punte
-    const r1=Math.min(W,H)*.32,r2=r1*.42,cx2=W/2,cy2=H/2;
-    for(let i=0;i<=10;i++){const a=i*Math.PI/5-Math.PI/2,r=i%2===0?r1:r2;pts.push({x:cx2+r*Math.cos(a),y:cy2+r*Math.sin(a)});}
-    pts.push({...pts[0]});
+    // stella a 5 punte — partenza da punta in alto, arrivo al centro-destra
+    // percorso: punta su → punta dx-basso → punta sx → punta dx → punta sx-basso → ritorna punta su
+    const r1=Math.min(W,H)*.38,r2=r1*.42,cx2=W/2,cy2=H/2+H*.04;
+    // genera tutti i 10 punti (5 punte esterne + 5 interne alternate)
+    const starPts=[];
+    for(let i=0;i<10;i++){const a=i*Math.PI/5-Math.PI/2,r=i%2===0?r1:r2;starPts.push({x:cx2+r*Math.cos(a),y:cy2+r*Math.sin(a)});}
+    // partenza: punta in alto (indice 0), arrivo: punta interna vicina (indice 9)
+    // percorso completo senza chiudere: 0→1→2→3→4→5→6→7→8→9
+    for(let i=0;i<10;i++)pts.push(starPts[i]);
   } else if(type==='house'){
-    // casa semplice
-    const bx=W*.15,by=H*.35,bw=W*.7,bh=H*.45;
-    pts.push({x:bx,y:by+bh},{x:bx,y:by},{x:bx+bw/2,y:H*.1},{x:bx+bw,y:by},{x:bx+bw,y:by+bh},{x:bx,y:by+bh});
+    // casa grande e semplice
+    const bx=W*.1,by=H*.38,bw=W*.8,bh=H*.48;
+    pts.push({x:bx,y:by+bh},{x:bx,y:by},{x:bx+bw/2,y:H*.08},{x:bx+bw,y:by},{x:bx+bw,y:by+bh},{x:bx,y:by+bh});
   } else if(type==='car'){
-    // macchina stilizzata vista di lato
-    pts.push({x:W*.1,y:H*.7},{x:W*.1,y:H*.55},{x:W*.25,y:H*.55},{x:W*.35,y:H*.35},{x:W*.65,y:H*.35},{x:W*.75,y:H*.55},{x:W*.9,y:H*.55},{x:W*.9,y:H*.7},{x:W*.1,y:H*.7});
+    // macchina grande e semplice
+    pts.push({x:W*.08,y:H*.72},{x:W*.08,y:H*.52},{x:W*.22,y:H*.52},{x:W*.32,y:H*.3},{x:W*.68,y:H*.3},{x:W*.78,y:H*.52},{x:W*.92,y:H*.52},{x:W*.92,y:H*.72},{x:W*.08,y:H*.72});
   } else {
     // loop / ovale
     for(let i=0;i<=36;i++){const a=i*Math.PI*2/36;pts.push({x:cx+Math.cos(a)*W*.38,y:cy+Math.sin(a)*H*.32});}
@@ -395,6 +401,9 @@ function nextDiverso(){
   const iconSize=Math.min(86,W/4.5);
   // posiziona casualmente
   const placed=[];
+  const isLetterOrNum=set.main.length===1&&(set.main>='0'&&set.main<='9'||set.main>='A'&&set.main<='Z');
+  const mainColor='#4D96FF'; // colore uguale per tutti gli uguali
+  const diffColor='#FF6B6B'; // colore diverso solo per quello da trovare
   for(let i=0;i<count;i++){
     const isDiff=i===diffPos;
     let x,y,tries=0;
@@ -403,12 +412,16 @@ function nextDiverso(){
     placed.push({x,y});
     const el=document.createElement('div');
     el.textContent=isDiff?set.diff:set.main;
-    el.style.cssText=`position:absolute;left:${x}px;top:${y}px;width:${iconSize}px;height:${iconSize}px;font-size:${iconSize*.65}px;display:flex;align-items:center;justify-content:center;border-radius:14px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.12);cursor:pointer;user-select:none;transition:transform .12s`;
+    const bgColor=isLetterOrNum?(isDiff?diffColor:mainColor):'#fff';
+    const textColor=isLetterOrNum?'#fff':'inherit';
+    el.style.cssText=`position:absolute;left:${x}px;top:${y}px;width:${iconSize}px;height:${iconSize}px;font-size:${isLetterOrNum?iconSize*.6:iconSize*.65}px;font-weight:900;display:flex;align-items:center;justify-content:center;border-radius:${isLetterOrNum?'14px':'50%'};background:${bgColor};color:${textColor};box-shadow:0 3px 10px rgba(0,0,0,0.14);cursor:pointer;user-select:none;transition:transform .12s`;
     el.addEventListener('touchstart',ev=>{ev.preventDefault();handleDiverso(isDiff,el);},{passive:false});
     el.addEventListener('mousedown',()=>handleDiverso(isDiff,el));
     area.appendChild(el);
   }
-  setBubble('diverso',`TROVA ${set.diff} TRA I ${set.main}! 🔍`);bounceFico('fico-diverso');
+  // bolla: mostra SOLO quello da trovare
+  setBubble('diverso',`<span style="font-size:48px;display:block;text-align:center;line-height:1.1">${set.diff}</span><span style="font-size:16px">TROVA QUESTO! 🔍</span>`);
+  bounceFico('fico-diverso');
   // timer 7000ms → min 5000ms
   const duration=Math.max(5000,7000-diversoLevel*150);
   let elapsed=0;const tick=100;
@@ -448,7 +461,7 @@ function initBolle(){bolleScore=0;bolleLevel=1;document.getElementById('bolle-sc
 function nextBolle(){
   clearInterval(bolleInt);clearInterval(bolleTimerInt);
   bolleTarget=BUBBLE_CHARS[~~(Math.random()*BUBBLE_CHARS.length)];
-  setBubble('bolle',`SCOPPIA LA BOLLA CON "${bolleTarget}"! 🫧`);bounceFico('fico-bolle');
+  setBubble('bolle',`<span style="font-size:52px;display:block;text-align:center;line-height:1.1">${bolleTarget}</span><span style="font-size:16px">SCOPPIA QUESTA BOLLA! 🫧</span>`);bounceFico('fico-bolle');
   const area=document.getElementById('bolle-area');area.innerHTML='';bolleItems=[];
   const W=area.offsetWidth||window.innerWidth,H=area.offsetHeight||window.innerHeight*.6;
   const bSize=Math.min(110,W/4.5);
